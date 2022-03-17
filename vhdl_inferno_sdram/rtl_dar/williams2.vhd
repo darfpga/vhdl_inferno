@@ -215,6 +215,8 @@ architecture struct of williams2 is
  signal bg_pixels_6 : std_logic_vector( 3 downto 0);
  signal bg_pixels_7 : std_logic_vector( 3 downto 0);
  signal bg_pixels_8 : std_logic_vector( 3 downto 0);
+ signal bg_pixels_9 : std_logic_vector( 3 downto 0);
+ signal bg_pixels_10: std_logic_vector( 3 downto 0);
  signal bg_pixels_shifted : std_logic_vector(3 downto 0);
  
  signal hsync0,hsync1,hsync2,csync,hblank,vblank : std_logic;
@@ -366,6 +368,8 @@ begin
 			bg_pixels_6 <= bg_pixels_5;
 			bg_pixels_7 <= bg_pixels_6;
 			bg_pixels_8 <= bg_pixels_7;
+			bg_pixels_9 <= bg_pixels_8;
+			bg_pixels_10<= bg_pixels_9;
 			
 			if flip = '0' then 
 				fg_pixels_0 <= fg_pixels(23 downto 20);
@@ -379,24 +383,14 @@ end process;
 
 with xscroll(2 downto 0) select
 bg_pixels_shifted <= 
-	bg_pixels_1 when "000",
-	bg_pixels_2 when "001",
-	bg_pixels_3 when "010",
-	bg_pixels_4 when "011",
-	bg_pixels_5 when "100",
-	bg_pixels_6 when "101",
-	bg_pixels_7 when "110",
-	bg_pixels_8 when others;
-	
---	bg_pixels_0 when "000",
---	bg_pixels_1 when "001",
---	bg_pixels_2 when "010",
---	bg_pixels_3 when "011",
---	bg_pixels_4 when "100",
---	bg_pixels_5 when "101",
---	bg_pixels_6 when "110",
---	bg_pixels_7 when others;
-
+	bg_pixels_3 when "000",
+	bg_pixels_4 when "001",
+	bg_pixels_5 when "010",
+	bg_pixels_6 when "011",
+	bg_pixels_7 when "100",
+	bg_pixels_8 when "101",
+	bg_pixels_9 when "110",
+	bg_pixels_10 when others;
 	
 --	mux bus addr and pixels data to palette addr
 palette_addr <=
@@ -484,8 +478,8 @@ fg_color_bank_cs <= '1' when addr_bus(15 downto  5) = X"CB"&"000" else '0'; -- C
 bg_color_bank_cs <= '1' when addr_bus(15 downto  5) = X"CB"&"001" else '0'; -- CB20-CB3F
 xscroll_low_cs   <= '1' when addr_bus(15 downto  5) = X"CB"&"010" else '0'; -- CB40-CB5F
 xscroll_high_cs  <= '1' when addr_bus(15 downto  5) = X"CB"&"011" else '0'; -- CB60-CB7F
-flip_cs          <= '1' when cpu_addr(15 downto  5) = X"CB"&"100" else '0'; -- CB80-CB9F
-dma_inh_cs       <= '1' when cpu_addr(15 downto  5) = X"CB"&"101" else '0'; -- CBA0-CBBF
+flip_cs          <= '1' when addr_bus(15 downto  5) = X"CB"&"100" else '0'; -- CB80-CB9F
+dma_inh_cs       <= '1' when addr_bus(15 downto  5) = X"CB"&"101" else '0'; -- CBA0-CBBF
 pia_io2_cs       <= '1' when addr_bus(15 downto  7) = X"C9"&"1" and addr_bus(3 downto 2) = "00" else '0'; -- C980-C983
 pia_io1_cs       <= '1' when addr_bus(15 downto  7) = X"C9"&"1" and addr_bus(3 downto 2) = "01" else '0'; -- C984-C987
 sram_cs          <= '1' when addr_bus(15 downto 12) = X"D"        else '0'; -- D000-DFFF
@@ -506,11 +500,11 @@ vram_h1_we  <= '1' when vram_we = '1' and blit_wr_inh_h = '0' and decod_do(7 dow
 vram_h2_we  <= '1' when vram_we = '1' and blit_wr_inh_h = '0' and decod_do(7 downto 6)  = "10" else '0';
 
 -- mux banked rom address to external (d)ram
-rom_addr <= "00"&addr_bus(14 downto 0) when (page = "010"                ) else
-				"01"&addr_bus(14 downto 0) when (page = "110"                ) else
-				"10"&addr_bus(14 downto 0) when (page = "001" or page = "011") else
-				"11"&addr_bus(14 downto 0) when (page = "100" or page = "101") else
-				"00"&addr_bus(14 downto 0);
+rom_addr <= "00"&addr_bus(14 downto 0) when (page = "010"                ) else -- bank a
+				"01"&addr_bus(14 downto 0) when (page = "110"                ) else -- bank b
+				"10"&addr_bus(14 downto 0) when (page = "001" or page = "011") else -- bank c
+				"11"&addr_bus(14 downto 0) when (page = "100" or page = "101") else -- bank d
+				"00"&addr_bus(14 downto 0);                                         -- bank a
 
 -- mux data bus between cpu/blitter/roms/io/vram/sram
 data_bus_high <=
@@ -834,7 +828,7 @@ port map(
 graph1_rom : entity work.inferno_graph1
 port map(
  clk  => clock_12,
- addr => graph_addr(12 downto 0),
+ addr => graph_addr,
  data => graph1_do
 );
 
@@ -842,7 +836,7 @@ port map(
 graph2_rom : entity work.inferno_graph2
 port map(
  clk  => clock_12,
- addr => graph_addr(12 downto 0),
+ addr => graph_addr,
  data => graph2_do
 );
 
@@ -850,7 +844,7 @@ port map(
 graph3_rom : entity work.inferno_graph3
 port map(
  clk  => clock_12,
- addr => graph_addr(12 downto 0),
+ addr => graph_addr,
  data => graph3_do
 );
 
@@ -860,7 +854,7 @@ generic map( dWidth => 4, aWidth => 14)
 port map(
  clk  => clock_12,
  we   => vram_l0_we,
- addr => vram_addr(13 downto 0),
+ addr => vram_addr,
  d    => data_bus(3 downto 0),
  q    => vram_l0_do
 );
@@ -871,7 +865,7 @@ generic map( dWidth => 4, aWidth => 14)
 port map(
  clk  => clock_12,
  we   => vram_h0_we,
- addr => vram_addr(13 downto 0),
+ addr => vram_addr,
  d    => data_bus(7 downto 4),
  q    => vram_h0_do
 );
@@ -882,7 +876,7 @@ generic map( dWidth => 4, aWidth => 14)
 port map(
  clk  => clock_12,
  we   => vram_l1_we,
- addr => vram_addr(13 downto 0),
+ addr => vram_addr,
  d    => data_bus(3 downto 0),
  q    => vram_l1_do
 );
@@ -893,7 +887,7 @@ generic map( dWidth => 4, aWidth => 14)
 port map(
  clk  => clock_12,
  we   => vram_h1_we,
- addr => vram_addr(13 downto 0),
+ addr => vram_addr,
  d    => data_bus(7 downto 4),
  q    => vram_h1_do
 );
@@ -904,7 +898,7 @@ generic map( dWidth => 4, aWidth => 14)
 port map(
  clk  => clock_12,
  we   => vram_l2_we,
- addr => vram_addr(13 downto 0),
+ addr => vram_addr,
  d    => data_bus(3 downto 0),
  q    => vram_l2_do
 );
@@ -915,7 +909,7 @@ generic map( dWidth => 4, aWidth => 14)
 port map(
  clk  => clock_12,
  we   => vram_h2_we,
- addr => vram_addr(13 downto 0),
+ addr => vram_addr,
  d    => data_bus(7 downto 4),
  q    => vram_h2_do
 );
@@ -972,7 +966,7 @@ generic map( dWidth => 4, aWidth => 10)
 port map(
  clk  => clock_12,
  we   => cmos_we,
- addr => cpu_addr(9 downto 0),
+ addr => addr_bus(9 downto 0),
  d    => data_bus(3 downto 0),
  q    => cmos_do
 );
