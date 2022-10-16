@@ -31,6 +31,11 @@
 -- Set output to low level when in data is in input mode 
 -- (to avoid infered latch warning)
 --
+-- 16 October 2022 0.0.3           DarFpga
+-- Add pa_ddr_ovrd to allow port_a behavior where port_a input pin overrides 
+-- internal port_a data even when ouput mode is selected by ddr.
+-- (see 6821 datasheet)
+--
 --===========================================================================----
 --
 -- Memory Map
@@ -46,31 +51,32 @@ use ieee.std_logic_1164.all;
 use ieee.std_logic_unsigned.all;
 
 entity pia6821 is
-	port (	
-	 	clk       : in    std_logic;
-    rst       : in    std_logic;
-    cs        : in    std_logic;
-    rw        : in    std_logic;
-    addr      : in    std_logic_vector(1 downto 0);
-    data_in   : in    std_logic_vector(7 downto 0);
-	 	data_out  : out   std_logic_vector(7 downto 0);
-	 	irqa      : out   std_logic;
-	 	irqb      : out   std_logic;
-	 	pa_i      : in std_logic_vector(7 downto 0);
-	 	pa_o      : out std_logic_vector(7 downto 0);
-	 	pa_oe     : out std_logic_vector(7 downto 0);
-	 	ca1       : in    std_logic;
-	 	ca2_i     : in std_logic;
-	 	ca2_o     : out std_logic;
-	 	ca2_oe    : out std_logic;
-	 	pb_i      : in std_logic_vector(7 downto 0);
-	 	pb_o      : out std_logic_vector(7 downto 0);
-	 	pb_oe     : out std_logic_vector(7 downto 0);
-	 	cb1       : in    std_logic;
-	 	cb2_i     : in std_logic;
-	 	cb2_o     : out std_logic;
-	 	cb2_oe    : out std_logic
-	 );
+port (	
+  clk         : in    std_logic;
+  rst         : in    std_logic;
+  cs          : in    std_logic;
+  rw          : in    std_logic;
+  addr        : in    std_logic_vector(1 downto 0);
+  data_in     : in    std_logic_vector(7 downto 0);
+  data_out    : out   std_logic_vector(7 downto 0);
+  irqa        : out   std_logic;
+  irqb        : out   std_logic;
+  pa_i        : in std_logic_vector(7 downto 0);
+  pa_o        : out std_logic_vector(7 downto 0);
+  pa_oe       : out std_logic_vector(7 downto 0);
+  pa_ddr_ovrd : in std_logic_vector(7 downto 0) := x"00";
+  ca1         : in    std_logic;
+  ca2_i       : in std_logic;
+  ca2_o       : out std_logic;
+  ca2_oe      : out std_logic;
+  pb_i        : in std_logic_vector(7 downto 0);
+  pb_o        : out std_logic_vector(7 downto 0);
+  pb_oe       : out std_logic_vector(7 downto 0);
+  cb1         : in    std_logic;
+  cb2_i       : in std_logic;
+  cb2_o       : out std_logic;
+  cb2_oe      : out std_logic
+);
 end;
 
 architecture pia_arch of pia6821 is
@@ -135,7 +141,7 @@ begin
 				  data_out(count) <= porta_ddr(count);
 			     porta_read <= '0';
             else
-				  if porta_ddr(count) = '1' then
+				  if porta_ddr(count) = '1' and pa_ddr_ovrd(count) = '0' then
                 data_out(count) <= porta_data(count);
               else
                 data_out(count) <= pa_i(count);

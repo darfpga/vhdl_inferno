@@ -180,6 +180,7 @@ port map
 	pa_i      	=> sound_select,
 	pa_o        => open,
 	pa_oe       => open,
+	pa_ddr_ovrd => x"FF",
 	ca1       	=> sound_trig,
 	ca2_i      	=> '0',
 	ca2_o       => sound_ack,
